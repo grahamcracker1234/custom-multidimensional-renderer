@@ -1,0 +1,14 @@
+{
+	"name": "custom-multidimensional-renderer",
+	"version": "0.1",
+	"description": "A simple renderer to display any n-dimensional rotating hypercube.",
+	"main": "app.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"author": "grahamcracker1234",
+	"license": "MIT",
+	"devDependencies": {
+		"eslint": "^7.32.0"
+	}
+}
