@@ -64,7 +64,7 @@ const generateCube = (n) => {
 	return points;
 };
 
-// Rotations do not necessarily follow the right-hand-rule
+// Rotations do not necessarily follow the right-hand rule
 const Rotation = Object.freeze({
 	xy: theta => [
 		[Math.cos(theta), -Math.sin(theta), 0, 0],
@@ -124,10 +124,10 @@ const draw = (...args) => {
 	ctx.strokeStyle = "black";
 	ctx.lineWidth = 3;
 
-	const projection = [];
+	const transformations = [];
 	for (const point of points) {
 		const pointMatrix = [[point[0]], [point[1]], [point[2]], [point[3]]];
-		const theta = window.performance.now() / 1000;
+		const theta = window.performance.now() / 3000;
 		let newPointMatrix = matrixMultiplication(Rotation.xy(theta), pointMatrix);
 		newPointMatrix = matrixMultiplication(Rotation.xz(theta), newPointMatrix);
 		newPointMatrix = matrixMultiplication(Rotation.xw(theta), newPointMatrix);
@@ -135,7 +135,36 @@ const draw = (...args) => {
 		newPointMatrix = matrixMultiplication(Rotation.yw(theta), newPointMatrix);
 		newPointMatrix = matrixMultiplication(Rotation.zw(theta), newPointMatrix);
 		const newPoint = [newPointMatrix[0][0], newPointMatrix[1][0], newPointMatrix[2][0], newPointMatrix[3][0]];
-		projection.push(newPoint);
+		transformations.push(newPoint);
+	}
+
+	const projections = [];
+	for (const point of transformations) {
+		const w = point[3];
+		const far = 1000;
+		let r = far / (far - w);
+		let matrix = [
+			[r, 0, 0, 0],
+			[0, r, 0, 0],
+			[0, 0, r, 0],
+			[0, 0, 0, r]
+		];
+		let pointMatrix = [[point[0]], [point[1]], [point[2]], [point[3]]];
+		let newPointMatrix = matrixMultiplication(matrix, pointMatrix);
+		let newPoint = [newPointMatrix[0][0], newPointMatrix[1][0], newPointMatrix[2][0], newPointMatrix[3][0]];
+
+		// const z = newPoint[2];
+		// r = far / (far - z);
+		// matrix = [
+		// 	[r, 0, 0],
+		// 	[0, r, 0],
+		// 	[0, 0, r]
+		// ];
+		// pointMatrix = [[point[0]], [point[1]], [point[2]]];
+		// newPointMatrix = matrixMultiplication(matrix, pointMatrix);
+		// newPoint = [newPointMatrix[0][0], newPointMatrix[1][0], newPointMatrix[2][0]];
+
+		projections.push(newPoint);
 	}
 
 	const pairs = [];
@@ -158,8 +187,8 @@ const draw = (...args) => {
 
 	for (const [i, j] of pairs) {
 		ctx.beginPath();
-		ctx.moveTo(projection[i][0], projection[i][1]);
-		ctx.lineTo(projection[j][0], projection[j][1]);
+		ctx.moveTo(projections[i][0], projections[i][1]);
+		ctx.lineTo(projections[j][0], projections[j][1]);
 		ctx.stroke();
 	}
 

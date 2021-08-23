@@ -64,7 +64,7 @@ const generateCube = (n) => {
 	return points;
 };
 
-// Rotations do not necessarily follow the right-hand-rule
+// Rotations do not necessarily follow the right-hand rule
 const Rotation = Object.freeze({
 	xy: theta => [
 		[Math.cos(theta), -Math.sin(theta), 0],
@@ -103,7 +103,7 @@ const draw = (...args) => {
 	ctx.strokeStyle = "black";
 	ctx.lineWidth = 3;
 
-	const projection = [];
+	const transformations = [];
 	for (const point of points) {
 		const pointMatrix = [[point[0]], [point[1]], [point[2]]];
 		const theta = window.performance.now() / 1000;
@@ -111,7 +111,23 @@ const draw = (...args) => {
 		newPointMatrix = matrixMultiplication(Rotation.xz(theta), newPointMatrix);
 		newPointMatrix = matrixMultiplication(Rotation.yz(theta), newPointMatrix);
 		const newPoint = [newPointMatrix[0][0], newPointMatrix[1][0], newPointMatrix[2][0]];
-		projection.push(newPoint);
+		transformations.push(newPoint);
+	}
+
+	const projections = [];
+	for (const point of transformations) {
+		const z = point[2];
+		const far = 1000;
+		const r = far / (far - z);
+		const matrix = [
+			[r, 0, 0],
+			[0, r, 0],
+			[0, 0, r]
+		];
+		const pointMatrix = [[point[0]], [point[1]], [point[2]]];
+		const newPointMatrix = matrixMultiplication(matrix, pointMatrix);
+		const newPoint = [newPointMatrix[0][0], newPointMatrix[1][0], newPointMatrix[2][0]];
+		projections.push(newPoint);
 	}
 
 	const pairs = [];
@@ -133,8 +149,8 @@ const draw = (...args) => {
 
 	for (const [i, j] of pairs) {
 		ctx.beginPath();
-		ctx.moveTo(projection[i][0], projection[i][1]);
-		ctx.lineTo(projection[j][0], projection[j][1]);
+		ctx.moveTo(projections[i][0], projections[i][1]);
+		ctx.lineTo(projections[j][0], projections[j][1]);
 		ctx.stroke();
 	}
 
