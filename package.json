@@ -4,11 +4,12 @@
 	"description": "A simple renderer to display any n-dimensional rotating hypercube.",
 	"main": "app.js",
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1"
+		"serve": "serve"
 	},
 	"author": "grahamcracker1234",
 	"license": "MIT",
 	"devDependencies": {
-		"eslint": "^7.32.0"
+		"eslint": "^7.32.0",
+		"serve": "^12.0.0"
 	}
 }

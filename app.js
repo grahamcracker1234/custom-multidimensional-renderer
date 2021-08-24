@@ -27,10 +27,7 @@ const Canvas = () => {
 	};
 	
 	resize();
-	window.addEventListener("resize", () => {
-		console.log("resize");
-		resize();
-	});
+	window.addEventListener("resize", resize);
 
 	return canvas;
 };
@@ -58,65 +55,46 @@ const matrixMultiplication = (a, b) => {
 	return product;
 };
 
-const generateCubePoints = (dimension, size) => {
+const CubePoints = function* (dimension, size) {
 	const end = 2 ** dimension;
-	const points = [];
 	for (let i = 0; i < end; i++) {
 		const binary = i.toString(2).padStart(end.toString(2).length - 1, 0);
-		const vector = Array.from(binary).map(x => x === "0" ? -1 : 1).map(x => x * size / 2);
-		points.push(vector);
+		yield Array.from(binary).map(x => x === "0" ? -1 : 1).map(x => x * size / 2);
 	}
-	return points;
 };
 
 // Rotations do not necessarily follow the right-hand rule
-const generateRotations = (dimension, theta) => {
-	const rotations = [];
+const Rotations = function* (dimension) {
 	for (let i = 0; i < dimension - 1; i++) {
 		for (let j = i + 1; j < dimension; j++) {
-			const matrix = Matrix(dimension);
-			for (let k = 0; k < dimension; k++) matrix[k][k] = 1;
-			matrix[i][i] = Math.cos(theta);
-			matrix[i][j] = -Math.sin(theta);
-			matrix[j][i] = Math.sin(theta);
-			matrix[j][j] = Math.cos(theta);
-			rotations.push(matrix);
+			yield (theta) => {
+				const matrix = Matrix(dimension);
+				for (let k = 0; k < dimension; k++) matrix[k][k] = 1;
+				matrix[i][i] = Math.cos(theta);
+				matrix[i][j] = -Math.sin(theta);
+				matrix[j][i] = Math.sin(theta);
+				matrix[j][j] = Math.cos(theta);
+				return matrix;
+			};
 		}
 	}
-	return rotations;
 };
 
-const Transformations = (points, GLOBAL) => {
-	const newPoints = [];
+const Transformations = function* (points, GLOBAL) {
 	for (const point of points) {
 		const pointMatrix = Matrix(GLOBAL.DIMENSIONS, 1);
 		for (const i in pointMatrix) pointMatrix[i] = [point[i]]; // Convert to matrix
 
-		const theta = window.performance.now() / 3000;
-		const rotations = generateRotations(GLOBAL.DIMENSIONS, theta);
+		const theta = GLOBAL.SPEED * window.performance.now() / 10000;
 		let newPointMatrix = pointMatrix;
-		for (const rotation of rotations) newPointMatrix = matrixMultiplication(rotation, newPointMatrix);
+		for (const rotation of Rotations(GLOBAL.DIMENSIONS))
+			newPointMatrix = matrixMultiplication(rotation(theta), newPointMatrix);
 
-		const newPoint = newPointMatrix.map(x => x[0]); // Convert to vector
-		newPoints.push(newPoint);
+		yield newPointMatrix.map(x => x[0]); // Convert to vector
 	}
-	return newPoints;
 };
 
-const setup = (GLOBAL) => {
-	if (GLOBAL.DIMENSIONS !== parseInt(GLOBAL.DIMENSIONS)) throw new Error("Dimension must be positive integer greater than 1");
-
-	const canvas = Canvas();
-	const ctx = canvas.getContext("2d");
-	document.body.appendChild(canvas);
-
-	const points = generateCubePoints(GLOBAL.DIMENSIONS, 400);
-
-	return [canvas, ctx, points, GLOBAL];
-};
-
-const Pairs = (points, GLOBAL) => {
-	const pairs = [];
+const Pairs = function* (points, GLOBAL) {
 	for (const i in points) {
 		const a = points[i];
 		for (const j in points) {
@@ -129,31 +107,47 @@ const Pairs = (points, GLOBAL) => {
 				if (a[k] === b[k]) matches++;
 
 			if (matches !== GLOBAL.DIMENSIONS - 1) continue;
-			pairs.push([i, j]);
+			yield [i, j];
 		}
 	}
-	return pairs;
 };
 
-const Projections = (points, GLOBAL) => {
-	const projections = [];
+const Projections = function* (points, GLOBAL) {
 	for (const point of points) {
-		const n = point[point.length - 1];
-		const far = 1000;
-		const r = far / (far - n);
-		
-		const matrix = Matrix(GLOBAL.DIMENSIONS);
-		for (const i in matrix) matrix[i][i] = r; 
+		let newPoint = point;
+		for (let i = 2; i < GLOBAL.DIMENSIONS; i++) {
+			const n = point[i];
+			const far = 1000;
+			const r = far / (far - n);
+			
+			const matrix = Matrix(i);
+			for (const i in matrix) matrix[i][i] = r; 
 
-		const pointMatrix = Matrix(GLOBAL.DIMENSIONS, 1);
-		for (const i in pointMatrix) pointMatrix[i] = [point[i]]; // Convert to matrix
+			const pointMatrix = Matrix(i, 1);
+			for (const i in pointMatrix) pointMatrix[i] = [point[i]]; // Convert to matrix
 
-		const newPointMatrix = matrixMultiplication(matrix, pointMatrix);
-		const newPoint = newPointMatrix.map(x => x[0]); // Convert to vector
-
-		projections.push(newPoint);
+			const newPointMatrix = matrixMultiplication(matrix, pointMatrix);
+			newPoint = newPointMatrix.map(x => x[0]); // Convert to vector
+		}
+		yield newPoint;
 	}
-	return projections;
+};
+
+const hash = (x) => Math.abs(parseInt(x % 16)).toString(16);
+
+const setup = (GLOBAL) => {
+	if (GLOBAL.DIMENSIONS !== parseInt(GLOBAL.DIMENSIONS)) throw new Error("Dimension must be positive integer greater than 1");
+
+	const canvas = Canvas();
+	const ctx = canvas.getContext("2d");
+	ctx.fillStyle = GLOBAL.BACKGROUND_COLOR;
+	ctx.fillRect(-canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
+
+	document.body.appendChild(canvas);
+
+	const points = Array.from(CubePoints(GLOBAL.DIMENSIONS, GLOBAL.SIZE));
+
+	return [canvas, ctx, points, GLOBAL];
 };
 
 const draw = (...args) => {
@@ -161,20 +155,33 @@ const draw = (...args) => {
 	const width = canvas.width;
 	const height = canvas.height;
 
-	ctx.clearRect(-width / 2, -height / 2, width, height);
-	ctx.fillStyle = GLOBAL.COLOR;
-	ctx.strokeStyle = GLOBAL.COLOR;
-	ctx.lineWidth = GLOBAL.LINE_WIDTH;
+	if (GLOBAL.BACKGROUND_ALPHA === 1 && GLOBAL.BACKGROUND_COLOR == null) {
+		ctx.clearRect(-width / 2, -height / 2, width, height);
+	} else {
+		ctx.globalAlpha = GLOBAL.BACKGROUND_ALPHA;
+		ctx.fillStyle = GLOBAL.BACKGROUND_COLOR;
+		ctx.fillRect(-width / 2, -height / 2, width, height);
+	}
 
-	let newPoints = Transformations(points, GLOBAL);
+	ctx.fillStyle = GLOBAL.COLOR ?? "black";
+	ctx.strokeStyle = GLOBAL.COLOR ?? "black";
+	ctx.lineWidth = GLOBAL.LINE_WIDTH;
+	ctx.lineCap = "round";
+	ctx.globalAlpha = 0.5;
+
+	let newPoints = Array.from(Transformations(points, GLOBAL));
 
 	if (GLOBAL.PROJECTION === Projection.PERSPECTIVE) {
-		newPoints = Projections(newPoints, GLOBAL);
+		newPoints = Array.from(Projections(newPoints, GLOBAL));
 	}
 
 	if (GLOBAL.DISPLAY === Display.EDGES || GLOBAL.DISPLAY === Display.VERTICES_EDGES) {
 		const pairs = Pairs(points, GLOBAL);
 		for (const [i, j] of pairs) {
+			if (GLOBAL.COLOR == null) {
+				const color = "#" + hash(i) + hash(j) + hash(i + 8) + hash(j + 8) + hash(i ** j) + hash(j ** i);
+				ctx.strokeStyle = color;
+			}
 			ctx.beginPath();
 			ctx.moveTo(newPoints[i][0], newPoints[i][1]);
 			ctx.lineTo(newPoints[j][0], newPoints[j][1]);
@@ -197,9 +204,13 @@ const draw = (...args) => {
 	const GLOBAL = Object.freeze({
 		DIMENSIONS: 4,
 		PROJECTION: Projection.PERSPECTIVE,
-		COLOR: "black",
 		DISPLAY: Display.EDGES,
-		LINE_WIDTH: 3
+		COLOR: null,
+		BACKGROUND_COLOR: "black",
+		BACKGROUND_ALPHA: 1,
+		LINE_WIDTH: 3,
+		SPEED: 5,
+		SIZE: 400
 	});
 	const options = setup(GLOBAL);
 	draw(...options);
