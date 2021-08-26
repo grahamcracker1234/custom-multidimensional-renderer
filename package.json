@@ -1,6 +1,6 @@
 {
-	"name": "custom-multidimensional-renderer",
-	"version": "0.1",
+	"name": "multidimensional-renderer",
+	"version": "1.0.0",
 	"description": "A simple renderer to display any n-dimensional rotating hypercube.",
 	"main": "app.js",
 	"scripts": {
