@@ -87,8 +87,12 @@ const Transformations = function* (points, GLOBAL) {
 
 		const theta = GLOBAL.SPEED * window.performance.now() / 10000;
 		let newPointMatrix = pointMatrix;
-		for (const rotation of Rotations(GLOBAL.DIMENSIONS))
-			newPointMatrix = matrixMultiplication(rotation(theta), newPointMatrix);
+		let multiplier = 0.5;
+		for (const rotation of Rotations(GLOBAL.DIMENSIONS)) {
+			const r = GLOBAL.ROTATION_OFFSET ? rotation(theta * multiplier) : rotation(theta);
+			newPointMatrix = matrixMultiplication(r, newPointMatrix);
+			multiplier += 1 / GLOBAL.DIMENSIONS;
+		}
 
 		yield newPointMatrix.map(x => x[0]); // Convert to vector
 	}
@@ -210,7 +214,8 @@ const draw = (...args) => {
 		BACKGROUND_ALPHA: 1,
 		LINE_WIDTH: 3,
 		SPEED: 5,
-		SIZE: 400
+		SIZE: 400,
+		ROTATION_OFFSET: true
 	});
 	const options = setup(GLOBAL);
 	draw(...options);
