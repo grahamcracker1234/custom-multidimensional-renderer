@@ -119,10 +119,8 @@ const Pairs = function* (points, GLOBAL) {
 const Projections = function* (points, GLOBAL) {
 	for (const point of points) {
 		let newPoint = point;
-		for (let i = 2; i < GLOBAL.DIMENSIONS; i++) {
-			const n = point[i];
-			const far = 1000;
-			const r = far / (far - n);
+		for (let i = GLOBAL.DIMENSIONS - 1; i > 1; i--) {
+			const r = GLOBAL.FAR_CLIPPING_PLANE / (GLOBAL.FAR_CLIPPING_PLANE - point[i]);
 			
 			const matrix = Matrix(i);
 			for (const i in matrix) matrix[i][i] = r; 
@@ -206,7 +204,7 @@ const draw = (...args) => {
 
 (() => {
 	const GLOBAL = Object.freeze({
-		DIMENSIONS: 4,
+		DIMENSIONS: 5,
 		PROJECTION: Projection.PERSPECTIVE,
 		DISPLAY: Display.EDGES,
 		COLOR: null,
@@ -215,7 +213,8 @@ const draw = (...args) => {
 		LINE_WIDTH: 3,
 		SPEED: 5,
 		SIZE: 400,
-		ROTATION_OFFSET: true
+		ROTATION_OFFSET: true,
+		FAR_CLIPPING_PLANE: 1000
 	});
 	const options = setup(GLOBAL);
 	draw(...options);
