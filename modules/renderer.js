@@ -50,6 +50,61 @@ const edgeGenerator = function* (dimension, cubePoints) {
 };
 
 /**
+ * Generates sets of indices of the points that represent a face.
+ * @param {number} dimension - The dimension of the generated faces.
+ * @param {number[][]} cubePoints - An array of a non-rotated points of a cube.
+ * @yields {number[]} A set of indices that represent an face.
+ */
+const faceGenerator = function* (dimension, cubePoints) {
+	for (const i in cubePoints) {
+		const a = cubePoints[i];
+		for (const j in cubePoints) {
+			const b = cubePoints[j];
+			if (i >= j) continue; 
+			for (const k in cubePoints) {
+				const c = cubePoints[k];
+				if (i >= k) continue; 
+				if (j >= k) continue; 
+				for (const l in cubePoints) {
+					const d = cubePoints[l];
+					if (i >= l) continue; 
+					if (j >= l) continue; 
+					if (k >= l) continue; 
+
+					let matches = 0;
+					for (const m in a)
+						if ([a,b,c,d].every((x) => x[m] === a[m])) matches++;
+
+					if (matches !== dimension - 2) continue;
+
+					let indices = [i];
+					matches = 0;
+					for (const m in a)
+						if (a[m] === b[m]) matches++;
+					if (matches === dimension - 1) {
+						indices.push(j);
+						matches = 0;
+						for (const m in b)
+							if (b[m] === c[m]) matches++;
+						if (matches === dimension - 1) indices.push(k, l);
+						else indices.push(l, k);
+					} else {
+						indices.push(k);
+						matches = 0;
+						for (const m in c)
+							if (c[m] === b[m]) matches++;
+						if (matches === dimension - 1) indices.push(j, l);
+						else indices.push(l, j);
+					}
+
+					yield indices;
+				}
+			}
+		}
+	}
+};
+
+/**
  * Callback for a rotation matrix.
  * @callback rotationMatrix
  * @param {number} theta - The angle of rotation.
@@ -75,22 +130,26 @@ const rotationsGenerator = function* (dimension) {
 	}
 };
 
-const transformGenerator = function* (points) {
-	for (const point of points) {
-		let pointMatrix = Point.toMatrix(point);
+const transformGenerator = (() => {
+	let memo;
+	return function* (points) {
+		for (const point of points) {
+			let pointMatrix = Point.toMatrix(point);
 
-		let multiplier = 1;
-		const theta = Global.SPEED * window.performance.now() / 10000;
-		const rotationLength = Global.DIMENSIONS * (Global.DIMENSIONS - 1) / 2;
-		for (const rotation of rotationsGenerator(Global.DIMENSIONS)) {
-			const r = Global.ROTATION_OFFSET ? rotation(theta * multiplier) : rotation(theta);
-			pointMatrix = Matrix.mul(r, pointMatrix);
-			multiplier += Global.ROTATION_OFFSET / rotationLength;
+			let multiplier = 1;
+			const theta = Global.SPEED * window.performance.now() / 10000;
+			const rotationLength = Global.DIMENSIONS * (Global.DIMENSIONS - 1) / 2;
+			memo ??= Array.from(rotationsGenerator(Global.DIMENSIONS));
+			for (const rotation of memo) {
+				const r = Global.ROTATION_OFFSET ? rotation(theta * multiplier) : rotation(theta);
+				pointMatrix = Matrix.mul(r, pointMatrix);
+				multiplier += Global.ROTATION_OFFSET / rotationLength;
+			}
+
+			yield Matrix.toPoint(pointMatrix);
 		}
-
-		yield Matrix.toPoint(pointMatrix);
-	}
-};
+	};
+})();
 
 const projectionGenerator = function* (points) {
 	for (const point of points) {
@@ -98,13 +157,13 @@ const projectionGenerator = function* (points) {
 		for (let i = point.length - 1; i > 1; i--) {
 			const r = Global.FAR_CLIPPING_PLANE / (Global.FAR_CLIPPING_PLANE - newPoint[i]);
 			
-			const projectionMatrix = Matrix.init(i, i);
+			const projectionMatrix = Matrix.init(point.length, point.length);
 			for (const j in projectionMatrix) projectionMatrix[j][j] = r;
 
 			const pointMatrix = Point.toMatrix(newPoint);
 			const newPointMatrix = Matrix.mul(projectionMatrix, pointMatrix);
 
-			newPoint = Matrix.toPoint(newPointMatrix); // Convert to vector
+			newPoint = Matrix.toPoint(newPointMatrix);
 		}
 		yield newPoint;
 	}
@@ -129,27 +188,54 @@ const setup = () => {
 
 const drawVertices = ({canvas, points}) => {
 	const ctx = getContext(canvas);
-	for (const point of points) {
+	for (const i in points) {
+		const point = points[i];
+		const color = "#" + hash(point.length - i) + hash(i + point.length) + hash(i * point.length);
+		ctx.fillStyle = color;
 		ctx.beginPath();
-		ctx.arc(point[0], point[1], Global.LINE_WIDTH / 2, 0, 2 * Math.PI, false);
+		ctx.arc(point[0] ?? 0, point[1] ?? 0, Global.LINE_WIDTH / 2, 0, 2 * Math.PI, false);
 		ctx.fill();
 	}
 };
 
-const drawEdges = ({canvas, cubePoints, points}) => {
-	const ctx = getContext(canvas);
-	const pairs = edgeGenerator(Global.DIMENSIONS, cubePoints);
-	for (const [i, j] of pairs) {
-		if (Global.COLOR == null) {
-			const color = "#" + hash(i / j) + hash(i + j) + hash(i * j);
-			ctx.strokeStyle = color;
+const drawEdges = (() => {
+	let memo;
+	return ({canvas, cubePoints, points}) => {
+		const ctx = getContext(canvas);
+		memo ??= Array.from(edgeGenerator(Global.DIMENSIONS, cubePoints));
+		for (const [i, j] of memo) {
+			if (Global.COLOR == null) {
+				const color = "#" + hash(i / j) + hash(i + j) + hash(i * j);
+				ctx.strokeStyle = color;
+			}
+			ctx.beginPath();
+			ctx.moveTo(points[i][0] ?? 0, points[i][1] ?? 0);
+			ctx.lineTo(points[j][0] ?? 0, points[j][1] ?? 0);
+			ctx.stroke();
 		}
-		ctx.beginPath();
-		ctx.moveTo(points[i][0], points[i][1]);
-		ctx.lineTo(points[j][0], points[j][1]);
-		ctx.stroke();
-	}
-};
+	};
+})();
+
+const drawFaces = (() => {
+	let memo;
+	return ({canvas, cubePoints, points}) => {
+		const ctx = getContext(canvas);
+		memo ??= Array.from(faceGenerator(Global.DIMENSIONS, cubePoints));
+		for (const [i, j, k, l] of memo) {
+			if (Global.COLOR == null) {
+				const color = "#" + hash(i - j - k - l) + hash(i + j * k / l) + hash(i ** j / k + l);
+				ctx.fillStyle = color;
+			}
+			ctx.beginPath();
+			ctx.moveTo(points[i][0] ?? 0, points[i][1] ?? 0);
+			ctx.lineTo(points[j][0] ?? 0, points[j][1] ?? 0);
+			ctx.lineTo(points[k][0] ?? 0, points[k][1] ?? 0);
+			ctx.lineTo(points[l][0] ?? 0, points[l][1] ?? 0);
+			ctx.closePath();
+			ctx.fill();
+		}
+	};
+})();
 
 const drawBackground = (canvas) => {
 	const ctx = getContext(canvas);
@@ -191,12 +277,16 @@ const draw = ({canvas, cubePoints}) => {
 	if (Global.PROJECTION === Projection.PERSPECTIVE)
 		points = Array.from(projectionGenerator(points));
 
+	// If display contains faces, draw faces.
+	if (Global.DISPLAY.includes(Display.FACES))
+		drawFaces({canvas, cubePoints, points});
+
 	// If display contains edges, draw edges.
-	if (Global.DISPLAY === Display.EDGES || Global.DISPLAY === Display.VERTICES_EDGES)
+	if (Global.DISPLAY.includes(Display.EDGES))
 		drawEdges({canvas, cubePoints, points});
 
 	// If display contains vertices, draw Points
-	if (Global.DISPLAY === Display.VERTICES || Global.DISPLAY === Display.VERTICES_EDGES)
+	if (Global.DISPLAY.includes(Display.VERTICES))
 		drawVertices({canvas, points});
 
 	// Draw next frame.

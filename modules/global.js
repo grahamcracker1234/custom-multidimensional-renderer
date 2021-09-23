@@ -1,7 +1,11 @@
 const Display = Object.freeze({
 	VERTICES: "VERTICES",
 	EDGES: "EDGES",
-	VERTICES_EDGES: "VERTICES_EDGES"
+	FACES: "FACES",
+	VERTICES_EDGES: "VERTICES_EDGES",
+	VERTICES_FACES: "VERTICES_FACES",
+	EDGES_FACES: "EDGES_FACES",
+	VERTICES_EDGES_FACES: "VERTICES_EDGES_FACES"
 });
 
 const Projection = Object.freeze({
@@ -12,7 +16,7 @@ const Projection = Object.freeze({
 const Global = Object.freeze({
 	DIMENSIONS: 4,
 	PROJECTION: Projection.ORTHOGRAPHIC,
-	DISPLAY: Display.EDGES,
+	DISPLAY: Display.FACES,
 	COLOR: null,
 	BACKGROUND_COLOR: "black",
 	BACKGROUND_ALPHA: 1,
