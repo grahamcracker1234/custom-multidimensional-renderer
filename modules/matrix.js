@@ -5,9 +5,7 @@
  * @param {number} [fillValue = 0] - The value for which to fill the matrix.
  * @returns {number[][]} 2d array filled with zeros.
  */
-const init = (rows, cols, fillValue = 0) => {
-	return Array(rows).fill().map(() => Array(cols).fill(fillValue));
-};
+const init = (rows, cols, fillValue = 0) => Array(rows).fill().map(() => Array(cols).fill(fillValue));
 
 /**
  * Multiplies two matrices together.
@@ -37,9 +35,7 @@ const mul = (a, b) => {
  * @param {number[][]} matrix
  * @returns {number[]}
  */
-const toPoint = (matrix) => {
-	return matrix.map(row => row[0]);
-};
+const toPoint = (matrix) => matrix.map(row => row[0]);
 
 const Matrix = { init, mul, toPoint };
 

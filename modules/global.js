@@ -1,28 +1,53 @@
+/**
+ * Enum for which elements to display.
+ * @readonly
+ * @enum {number}
+ */
 const Display = Object.freeze({
-	VERTICES: "VERTICES",
-	EDGES: "EDGES",
-	FACES: "FACES",
-	VERTICES_EDGES: "VERTICES_EDGES",
-	VERTICES_FACES: "VERTICES_FACES",
-	EDGES_FACES: "EDGES_FACES",
-	VERTICES_EDGES_FACES: "VERTICES_EDGES_FACES"
+	VERTICES: 1 << 0,
+	EDGES: 1 << 1,
+	FACES: 1 << 2,
+	VERTICES_EDGES: (1 << 0) | (1 << 1),
+	VERTICES_FACES: (1 << 0) | (1 << 2),
+	EDGES_FACES: (1 << 1) | (1 << 2),
+	VERTICES_EDGES_FACES: (1 << 0) | (1 << 1) | (1 << 2),
+	has: (d) => (Global.DISPLAY & d) > 0,
 });
 
+/**
+ * Enum for projection type.
+ * @readonly
+ * @enum {number}
+ */
 const Projection = Object.freeze({
-	PERSPECTIVE: "PERSPECTIVE",
-	ORTHOGRAPHIC: "ORTHOGRAPHIC"
+	PERSPECTIVE: 0,
+	ORTHOGRAPHIC: 1,
 });
 
+/**
+ * @typedef {Object} Global
+ * @property {number} DIMENSION - The number of dimensions.
+ * @property {Projection} PROJECTION - The projection type.
+ * @property {Display} DISPLAY - The display type.
+ * @property {string} COLOR - The color of the renderer.
+ * @property {Color} BACKGROUND_COLOR - The background color of the canvas.
+ * @property {number} BACKGROUND_ALPHA - The opacity of the canvas background.
+ * @property {number} LINE_WIDTH - The width of the renderer's line.
+ * @property {number} SPEED - The degrees per second of the rotation.
+ * @property {number} SIZE - The size of the cube.
+ * @property {number} ROTATION_OFFSET - The differential between the dimensions' rotational speed.
+ * @property {number} FAR_CLIPPING_PLANE - The distance of the clipping plane from the camera. Will affect the field of view.
+ */
 const Global = Object.freeze({
-	DIMENSIONS: 4,
-	PROJECTION: Projection.ORTHOGRAPHIC,
+	DIMENSIONS: 6,
+	PROJECTION: Projection.PERSPECTIVE,
 	DISPLAY: Display.FACES,
 	COLOR: null,
 	BACKGROUND_COLOR: "black",
 	BACKGROUND_ALPHA: 1,
 	LINE_WIDTH: 3,
-	SPEED: 5,
-	SIZE: 400,
+	SPEED: 30,
+	SIZE: 300,
 	ROTATION_OFFSET: 1,
 	FAR_CLIPPING_PLANE: 1000
 });
@@ -35,6 +60,7 @@ const hash = function(data, seed = 0) {
 		h1 = Math.imul(h1 ^ ch, 2654435761);
 		h2 = Math.imul(h2 ^ ch, 1597334677);
 	}
+	
 	h1 = Math.imul(h1 ^ (h1>>>16), 2246822507) ^ Math.imul(h2 ^ (h2>>>13), 3266489909);
 	h2 = Math.imul(h2 ^ (h2>>>16), 2246822507) ^ Math.imul(h1 ^ (h1>>>13), 3266489909);
 
