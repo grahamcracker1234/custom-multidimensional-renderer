@@ -39,7 +39,7 @@ const Projection = Object.freeze({
  * @property {number} FAR_CLIPPING_PLANE - The distance of the clipping plane from the camera. Will affect the field of view.
  */
 const Global = Object.freeze({
-	DIMENSIONS: 6,
+	DIMENSIONS: 5,
 	PROJECTION: Projection.PERSPECTIVE,
 	DISPLAY: Display.FACES,
 	COLOR: null,

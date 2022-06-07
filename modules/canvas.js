@@ -1,5 +1,5 @@
 /**
- * Factor function for an html canvas.
+ * Factory function for a fullscreen html canvas.
  * @returns {HTMLCanvasElement}
  */
 const Canvas = () => {
