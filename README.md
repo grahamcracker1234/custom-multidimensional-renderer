@@ -2,6 +2,8 @@
 
 A simple renderer to display any n-dimensional rotating hypercube.
 
+[Demo with default options](https://grahamcracker1234.github.io/multidimensional-renderer/)
+
 ## Install
 > npm install
 
